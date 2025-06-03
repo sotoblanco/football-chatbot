@@ -9,6 +9,7 @@
 
 ## Project structure
 
+```
 football-chatbot/
 ├── backend/
 │   ├── __init__.py
@@ -20,6 +21,7 @@ football-chatbot/
 ├── .env.example        # Example environment file
 ├── requirements.txt    # Python dependencies
 └── README.md           # This file (Your guide!)
+```
 
 ## Setup Instructions
 
