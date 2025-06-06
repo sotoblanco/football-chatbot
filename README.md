@@ -92,8 +92,6 @@ football-chatbot/
 
     You should see the chat interface.
 
-
-
 ## Evals
 
 This project is made in the context of the AI Evals by Shreya and Hamel
@@ -114,17 +112,17 @@ We then follow the Error analysis process that consists in three step:
 2. Measure
 3. Improve
 
-## Analyze
+## Error Analysis
 
 This consists in five steps that helps to analyze our failure modes
 
-1. Boostrap initial dataset
+### 1. Boostrap initial dataset
 
 We need to generated queries that are likely to fail, you might wonder how can I know if something will fail: test your application! The best way to understand and extract some failure modes is by using your application yourself.
 
 The goal is to have 100 traces, and being diverse enought to are likely to get a failure mode, remember we need to find failures in our application. Since we might not have users at first we can create syntetic data, but this needs to be target to identify failure modes.
 
-### Dimensions
+#### Dimensions
 
 - Country requirements
 - Price requirements
@@ -155,7 +153,7 @@ THere are more than one failure mode here:
 
 This confirms that the data is cut-off to 2023, so base on our own use case we might add a tool to get updated data, we won't write an eval for this as it can be fix with a tool calling mecahnism.
 
-### Tuples
+#### Tuples
 
 Combination of dimension gives tuples that creates queries that are more likely to triger errors in our application
 
@@ -184,18 +182,21 @@ Generate the tupples with LLMs
 
 **Sample prompt for tupple combination**
 
-> Generate 10 random combinations of (country, player skills, scenario) for a football scouting assistant.
-> The dimensions are:
-> Country: the players nationality. Possible values: Argentina, Brazil, Spain, Venezuela...
-> Player skills: specific skills for each player, that includes compare players with other current or past players. Possible values: A player similar to messi, A player with a good awarness, Strong defensive players in off-side systems
-> Scenario: how well-formed or challenging the query is.
-> Possible values:
-> • exact match (clearly specified and feasible),
-> • ambiguous request (unclear or underspecified),
-> • shouldn't be handled (invalid or out-of-scope).
-> 
-> Output each tuple in the format: (country, player comparison , ambigous query)
-> Avoid duplicates. Vary values across dimensions. The goal is to create a diverse set of queries for our assistant.
+```
+Generate 10 random combinations of (country, player skills, scenario) for a football scouting assistant.
+The dimensions are:
+Country: the players nationality. Possible values: Argentina, Brazil, Spain, Venezuela...
+Player skills: specific skills for each player, that includes compare players with other current or past players. Possible values: A player similar to messi, A player with a good awarness, Strong defensive players in off-side systems
+Scenario: how well-formed or challenging the query is.
+Possible values:
+• exact match (clearly specified and feasible),
+• ambiguous request (unclear or underspecified),
+• shouldn't be handled (invalid or out-of-scope).
+
+Output each tuple in the format: (country, player skills, ambigous query)
+Avoid duplicates. Vary values across dimensions. The goal is to create a diverse set of queries for our assistant.
+```
+
 
 This is what I got from Gemini:
 
@@ -212,27 +213,65 @@ This is what I got from Gemini:
 (Uruguay, Any player who is good, shouldn't be handled)
 ```
 
-
-
 For each LLM-generated tuple, we then generate a full query in natural language. The second prompt might look like:
 
 **Sample prompt for natural language query**
 
-> We are generating synthetic user queries for a football scouting assistant. The assistant helps scouters find players compare strengths and abilities and provide recomendations for new players.
-> Given:
-> - Country: Portugal
-> - Player skills: A player with excellent passing range like Xavi
-> - Scenario: exact match
->
-> Write a realistic query that an agent might enter into the system to fulfill this client’s request. The query should reflect the client’s needs and the ambiguity of the scenario.
->
-> Example:
-> “Find a strong player from portugal”
->
-> Now generate a new query.
+```
+We are generating synthetic user queries for a football scouting assistant. The assistant helps scouters find players compare strengths and abilities and provide recomendations for new players.
+Given:
+- Country: Portugal
+- Player skills: A player with excellent passing range like Xavi
+- Scenario: exact match
+
+Write a realistic query that an agent might enter into the system to fulfill this client’s request. The query should reflect the client’s needs and the ambiguity of the scenario.
+
+Example:
+“Find a strong player from portugal”
+
+Now generate a new query.
+```
 
 Gemini response:
 
 ```
 Find a Portuguese midfielder with an exceptional passing range, similar to Xavi.
 ```
+We do this programatically in the evals folder
+
+See the [evals folder](./evals/) for the implementation of the error analysis process and synthetic data generation.
+
+#### Open Coding
+
+With our generated synthetic data we have a trace that consists on question and answer, we need to review the trace and annotate what we think about that trace thinking in terms of failure mode without thinkin about finding the cause of the failure.
+
+>For each trace, we read carefully and write brief notes about what we observe: where outputs are incorrect, where actions are surprising, or where the behavior feels wrong or unexpected. Each note Grounded theory calls this process “open coding.” is a potential signal of a failure mode or quality concern
+
+We built our own annotation tool, but there are many tools that can be use, the best use case for this tool is for when you have subject matter experts on the loop and need online collaboration.
+
+#### Axial coding: 
+
+The annotation from the previous section are chaotic and we need some structure
+
+**Sample prompt for axial coding**
+
+```
+Below is a list of open-ended annotations describing failures in an LLM-driven football scouting assistant. Please group them into a small set of coherent failure categories, where each category captures similar types of mistakes. Each group should have a short descriptive title and a brief one-line definition. Do not invent new failure types; only cluster based on what is present in the notes.
+```
+#### Failure taxonomy
+
+**Failure mode 1**: Player-Centric Information Deficiencies
+
+Definition: The LLM fails to prioritize or adequately detail individual player characteristics and information.
+
+
+**Failure mode 2**: Data Freshness and Completeness Issues
+
+Definition: The LLM's responses lack up-to-date information or omit crucial comparative and financial data.
+
+**Failure mode 3**: Output Structure and Organization Problems
+
+Definition: The LLM's output format does not effectively section or present player information for clarity and usability.
+
+
+
